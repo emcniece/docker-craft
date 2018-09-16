@@ -1,0 +1,55 @@
+version: '3.1'
+
+services:
+
+  nginx:
+    image: emcniece/nginx-cache-purge-craft:1.13-alpine
+    ports:
+      - 8080:80
+    links:
+      - craft
+    volumes:
+      #- craftroot:/var/www/html
+      - ./data/html:/var/www/html
+
+  craft:
+    image: emcniece/craft:2-php7.1-fpm-alpine
+    build:
+      context: .
+      dockerfile: ./php7.1/fpm-alpine/Dockerfile
+    volumes:
+      #- ./data/logs:/var/log
+      - ./data/html:/var/www/html
+    links:
+      - mariadb
+      - redis
+    # env vars are replaced in /craft/config
+    environment:
+      # Set locale to UTF-8 (https://oncletom.io/2015/docker-encoding/)
+      LANG: C.UTF-8
+
+      # REDIS is linked
+      REDIS_HOST: redis
+
+      # DB is linked
+      DB_HOST: mariadb
+      DB_NAME: craft
+      DB_PORT: 3306
+      DB_USER: craft
+      DB_PASS: craft
+
+  mariadb:
+    image: mariadb
+    command: mysqld --innodb-buffer-pool-size=20M
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_RANDOM_ROOT_PASSWORD: 'yes'
+      MYSQL_USER: craft
+      MYSQL_PASSWORD: craft
+      MYSQL_DATABASE: craft
+    volumes:
+      # Persistent data
+      - ./data/mariadb:/var/lib/mysql/data
+
+  redis:
+    image: redis:4-alpine
